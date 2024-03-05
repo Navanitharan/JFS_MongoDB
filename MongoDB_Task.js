@@ -16,4 +16,17 @@ db.product.find({product_material:"Soft"}).pretty()
 
 db.product.find({"product_color":"indigo","product_price":492})
 
-db.product.deleteMany({ "price": { "$in": db.products.aggregate([ { "$group": { "_id": "$product_price", "count": { "$sum": 1 } } },{ "$match": { "count": { "$gt": 1 } } }]).toArray().map(function(doc) { return doc._id; })}});
+var duplicatePrices = db.product.aggregate([
+    { $group: { _id: "$product_price", count: { $sum: 1 } } },
+    { $match: { count: { $gt: 1 } } },
+    { $project: { _id: 0, product_price: "$_id" } }
+]);
+
+
+var pricesToDelete = [];
+duplicatePrices.forEach(function(doc) {
+    pricesToDelete.push(doc.product_price);
+});
+
+
+db.product.deleteMany({ product_price: { $in: pricesToDelete } });
